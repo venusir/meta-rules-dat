@@ -1,0 +1,36 @@
+name: 🔄 Auto Sync All Branches from Upstream
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 每 6 小时运行一次
+  workflow_dispatch:     # 允许手动触发
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout destination repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 🔄 Sync all branches except this one
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git remote add upstream https://github.com/MetaCubeX/meta-rules-dat.git
+          git fetch upstream --prune
+          
+          # 核心改良：获取上游所有分支，但通过 grep 排除掉你当前正在运行的 actions-sync 分支
+          # 这样它只会覆盖主规则分支（如 main/master/gh-pages），而绝对不会动自己！
+          git for-each-ref refs/remotes/upstream/ --format='%(refname:short)' | while read -r remote_branch; do
+            local_branch="${remote_branch#upstream/}"
+            if [ "$local_branch" != "actions-sync" ]; then
+              echo "Syncing $remote_branch to $local_branch..."
+              git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "refs/remotes/upstream/$local_branch:refs/heads/$local_branch" --force
+            fi
+          done
