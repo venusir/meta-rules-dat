@@ -25,10 +25,11 @@ jobs:
           git remote add upstream https://github.com/MetaCubeX/meta-rules-dat.git
           git fetch upstream --prune
           
-          # 核心改良：获取上游所有分支，但通过 grep 排除掉你当前正在运行的 actions-sync 分支
-          # 这样它只会覆盖主规则分支（如 main/master/gh-pages），而绝对不会动自己！
-          git for-each-ref refs/remotes/upstream/ --format='%(refname:short)' | while read -r remote_branch; do
+          # 修复核心：通过 grep -v 'upstream$' 过滤掉远程主机名本身的干扰
+          git for-each-ref refs/remotes/upstream/ --format='%(refname:short)' | grep -v 'upstream$' | while read -r remote_branch; do
             local_branch="${remote_branch#upstream/}"
+            
+            # 排除掉你当前正在运行的 actions-sync 分支
             if [ "$local_branch" != "actions-sync" ]; then
               echo "Syncing $remote_branch to $local_branch..."
               git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "refs/remotes/upstream/$local_branch:refs/heads/$local_branch" --force
