@@ -8,11 +8,6 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
-# 👇 新增以下权限配置
-permissions:
-  contents: write      # 允许推送普通代码分支
-  workflows: write     # ⚠️ 关键：允许更新 .github/workflows 下的工作流文件
-
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -30,14 +25,13 @@ jobs:
           git remote add upstream https://github.com/MetaCubeX/meta-rules-dat.git
           git fetch upstream --prune
           
-          # 过滤掉远程主机名本身的干扰
           git for-each-ref refs/remotes/upstream/ --format='%(refname:short)' | grep -v 'upstream$' | while read -r remote_branch; do
             local_branch="${remote_branch#upstream/}"
             
-            # 🛡️ 核心安全锁：同时排除 actions-sync 分支 和 你的 custom 分支
             if [ "$local_branch" != "actions-sync" ] && [ "$local_branch" != "custom" ]; then
               echo "Syncing $remote_branch to $local_branch..."
-              git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "refs/remotes/upstream/$local_branch:refs/heads/$local_branch" --force
+              # ⚠️ 关键：这里改成了使用你配置的 SYNC_PAT
+              git push https://x-access-token:${{ secrets.SYNC_PAT }}@github.com/${{ github.repository }}.git "refs/remotes/upstream/$local_branch:refs/heads/$local_branch" --force
             else
               echo "🛡️ Skipped protected branch: $local_branch"
             fi
