@@ -8,6 +8,11 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+# 👇 新增以下权限配置
+permissions:
+  contents: write      # 允许推送普通代码分支
+  workflows: write     # ⚠️ 关键：允许更新 .github/workflows 下的工作流文件
+
 jobs:
   sync:
     runs-on: ubuntu-latest
